@@ -1,14 +1,58 @@
 name: Publish 
 
 on:
+  # when manually calls this workflow
   workflow_dispatch:
+  # Push to the main branch
   push:
     branches:
     - main
+  # pull request on the main branch
+  pull_request: 
+    branches: 
+      - main
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    
+      # Checkout the Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      
+      # Setup .Net
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 9.0
+      
+      # Install dependencies
+      - name: Install dependencies
+        run: dotnet restore
+      
+      # Build the project
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the code
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Setup .Net
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 9.0
+      
+      # Deploy to Azure Web App
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: app #get from env variable defined above
+          publish-profile: ${{secrets.AZURE_WEBAPP_PUBLISH_PROFILE}} # Set in the Github secrets
+          package: .
